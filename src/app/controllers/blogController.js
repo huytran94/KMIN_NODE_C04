@@ -7,6 +7,7 @@ class BlogController {
   async getBlogs(req, res, next) {
     try {
       const blogRecords = await BlogSchema.find();
+
       // convert tagname if available
       const convertData = await Promise.all(
         blogRecords.map(async (blogItem) => {
@@ -39,6 +40,90 @@ class BlogController {
       next(error);
     }
   }
+
+  async getBlogById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const blogRecord = await BlogSchema.findOne({
+        _id: id,
+      });
+
+      if (!blogRecord) {
+        return res
+          .status(HttpStatusCode.BadRequest)
+          .send(new BadRequest("Blog does not exist"));
+      }
+
+      const convertItem = {
+        id: blogRecord._id,
+        title: blogRecord.title,
+        content: blogRecord.content,
+        tagList: [],
+      };
+      if (blogRecord.tags.length > 0) {
+        const tagRecords = await TagSchema.find({
+          _id: { $in: blogRecord.tags },
+        });
+
+        if (tagRecords.length > 0) {
+          convertItem["tagList"] = tagRecords.map((tag) => tag.tagName);
+        }
+      }
+
+      return res
+        .status(HttpStatusCode.Ok)
+        .send(new SuccessResponse(convertItem));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getBlogByName(req, res, next) {
+    try {
+      const { name } = req.params;
+      const blogRecords = await BlogSchema.find({
+        title: { $regex: name, $options: "i" },
+      });
+
+      if (!blogRecords) {
+        return res
+          .status(HttpStatusCode.BadRequest)
+          .send(new BadRequest("Blog does not exist"));
+      }
+
+      // convert tagname if available
+      const convertData = await Promise.all(
+        blogRecords.map(async (blogItem) => {
+          const convertItem = {
+            id: blogItem.id,
+            content: blogItem.content,
+            title: blogItem.title,
+            thumbnailUrl: blogItem.thumbnailUrl,
+            tagList: [],
+          };
+
+          if (blogItem.tags.length > 0) {
+            const tagRecords = await TagSchema.find({
+              _id: { $in: blogItem.tags },
+            });
+
+            if (tagRecords.length > 0) {
+              convertItem["tagList"] = tagRecords.map((tag) => tag.tagName);
+            }
+          }
+
+          return convertItem;
+        })
+      );
+
+      return res
+        .status(HttpStatusCode.Ok)
+        .send(new SuccessResponse(convertData));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createBlog(req, res, next) {
     const { title, content, tags } = req.body;
     const thumbnail = req.file;
