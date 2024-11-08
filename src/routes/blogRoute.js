@@ -7,6 +7,12 @@ const blogRoute = Router();
 // get all blog
 blogRoute.get("/blogs", BlogController.getBlogs);
 
+// get single blog by id
+blogRoute.get("/blogs/:id", BlogController.getBlogById);
+
+// get single blog by name
+blogRoute.get("/blogs/getByName/:name", BlogController.getBlogByName);
+
 // create new blog
 blogRoute.post("/blogs", upload.single("thumbnail"), BlogController.createBlog);
 
